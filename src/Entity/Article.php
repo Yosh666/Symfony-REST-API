@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use App\Entity\Comment;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use ApiPlatform\Core\Annotation\ApiSubresource;
 //NOTE 
 //tjrs utiliser des doubles quotes dans {"get"} sinon ça bug
 /**
@@ -86,16 +87,26 @@ class Article
 
     /**
      * @ORM\OneToMany(targetEntity="App\Entity\Comment", mappedBy="article", orphanRemoval=true)
+     * @ApiSubresource
+     * 
      * 
      * @Groups("article:read")
      */
     private $comments;
+
+    /**
+     * @ORM\ManyToMany(targetEntity=Tag::class, inversedBy="articles", cascade="persist")
+     * 
+     * @Groups({"article:read", "article:write"})
+     */
+    private $tags;
 
     public function __construct()
     {
         $this->isPublished = false;
         $this->createdAt= new \DateTime();
         $this->comments = new ArrayCollection();
+        $this->tags = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -233,6 +244,32 @@ class Article
             if ($comment->getArticle() === $this) {
                 $comment->setArticle(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|Tag[]
+     */
+    public function getTags(): Collection
+    {
+        return $this->tags;
+    }
+
+    public function addTag(Tag $tag): self
+    {
+        if (!$this->tags->contains($tag)) {
+            $this->tags[] = $tag;
+        }
+
+        return $this;
+    }
+
+    public function removeTag(Tag $tag): self
+    {
+        if ($this->tags->contains($tag)) {
+            $this->tags->removeElement($tag);
         }
 
         return $this;
