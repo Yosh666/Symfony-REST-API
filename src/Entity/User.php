@@ -1,13 +1,15 @@
 <?php
 
 namespace App\Entity;
-
+//secret123
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use ApiPlatform\Core\Annotation\ApiResource;
-
+use Symfony\Component\Serializer\Annotation\SerializedName;
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
  * 
@@ -23,7 +25,7 @@ class User implements UserInterface
      * @ORM\GeneratedValue()
      * @ORM\Column(type="integer")
      * 
-     *  @Groups("user:read")
+     *  @Groups({"user:read", "article:read"})
      */
     private $id;
 
@@ -51,13 +53,21 @@ class User implements UserInterface
     
     /**
      * @Groups("user:write")
+     * 
+     * @SerializedName("password")
      */
     private $plainPassword;
+
+    /***
+     * @ORM\Column(type="string", unique=true, nullable=true)
+     * 
+     */
+    private $apiToken;
 
     /**
      * @ORM\Column(type="string", length=255)
      * 
-     * @Groups({"user:read", "user:write"})
+     *@Groups({"user:read", "user:write", "article:read"})
      */
     private $username;
 
@@ -67,6 +77,18 @@ class User implements UserInterface
      * @Groups({"user:read", "user:write"})
      */
     private $name;
+
+    /**
+     * @ORM\OneToMany(targetEntity=Article::class, mappedBy="author")
+     * 
+     * @Groups("user:read")
+     */
+    private $articles;
+
+    public function __construct()
+    {
+        $this->articles = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -114,6 +136,11 @@ class User implements UserInterface
         return $this;
     }
 
+    public function hasRoles(string $roles): bool
+    {
+        return in_array($roles, $this->roles);
+    }
+
     /**
      * @see UserInterface
      */
@@ -143,7 +170,7 @@ class User implements UserInterface
     public function eraseCredentials()
     {
         // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
+        $this->plainPassword = null;
     }
 
     public function setUsername(string $username): self
@@ -185,4 +212,55 @@ class User implements UserInterface
         return $this;
     }
 
+    /**
+     * @return Collection|Article[]
+     */
+    public function getArticles(): Collection
+    {
+        return $this->articles;
+    }
+
+    public function addArticle(Article $article): self
+    {
+        if (!$this->articles->contains($article)) {
+            $this->articles[] = $article;
+            $article->setAuthor($this);
+        }
+
+        return $this;
+    }
+
+    public function removeArticle(Article $article): self
+    {
+        if ($this->articles->contains($article)) {
+            $this->articles->removeElement($article);
+            // set the owning side to null (unless already changed)
+            if ($article->getAuthor() === $this) {
+                $article->setAuthor(null);
+            }
+        }
+
+        return $this;
+    }
+
+
+    /**
+     * Get the value of apiToken
+     */ 
+    public function getApiToken()
+    {
+        return $this->apiToken;
+    }
+
+    /**
+     * Set the value of apiToken
+     *
+     * @return  self
+     */ 
+    public function setApiToken($apiToken)
+    {
+        $this->apiToken = $apiToken;
+
+        return $this;
+    }
 }   

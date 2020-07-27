@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use ApiPlatform\Core\DataPersister\ContextAwareDataPersisterInterface;
-
+use Symfony\Component\Security\Core\Security;
 
 class ArticleDataPersister implements ContextAwareDataPersisterInterface {
 
@@ -29,15 +29,23 @@ class ArticleDataPersister implements ContextAwareDataPersisterInterface {
      */
     private $_request;
 
+    /**
+     * @param Security
+     */
+    private $_security;
+
     public function __construct(
         EntityManagerInterface $entityManager,
         SluggerInterface $slugger,
-        RequestStack $request
+        RequestStack $request,
+        Security $security
+        
     )
     {
         $this->_entityManager   =$entityManager;
         $this->_slugger=$slugger;
         $this->_request=$request->getCurrentRequest();
+        $this->_security=$security;
     }
 
 
@@ -63,6 +71,12 @@ class ArticleDataPersister implements ContextAwareDataPersisterInterface {
                 ->slug(strtolower($data->getTitle())). '-'.uniqid()
             );
         }
+
+         // Set the author if it's a new article
+         if ($this->_request->getMethod() === 'POST') {
+            $data->setAuthor($this->_security->getUser());
+        }
+
         // Set the updatedAt value if it's not a POST request
         if ($this->_request->getMethod() !== 'POST') {
             $data->setUpdateAt(new \DateTime());
